@@ -1,0 +1,48 @@
+###########################
+# Marina Magana
+# Geog 173
+# Lab #2
+# 4-11-14
+######################
+# file reading
+import arcpy
+import os
+folder_path =r'F:\Spring 2014\Geog 173\Lab\Week 2\LabData'
+
+#file list
+file_list = os.listdir(folder_path)
+
+print 'There are ' + str(len(file_list)) + ' files in this folder.' #prints the number of files in the folder
+print 'This is the file list:'
+print file_list #prints the file list
+
+
+#2 finding the shapefiles
+i=0 #set the loop counter to 0
+shapefileCount = 0 #set shapefile counter to 0
+shapefileNames = [] #create list to put found shapefiles into
+while i < len(file_list):
+    if file_list[i].find('.shp') != -1: #if the extension .shp is found, then this command will return the position of the string.  If not found, it returns a -1 code.
+        shapefileCount = shapefileCount + 1 #increase the shapefile counter by 1
+        shapefileNames.append(file_list[i]) #add all the found shapefiles to a list
+    i = i+1 #increase loop counter
+if shapefileCount == 0: #conditional clause for if no shapefiles are found
+    print 'There are no shapefiles in this folder'
+elif shapefileCount == 1: #prints out if a single shapefile is found
+    print 'There is 1 shapefile in this folder'
+else: #prints out if multiple shapefiles are found
+    print 'There are ' + str(shapefileCount) + ' shapefiles in this folder'
+  
+print 'The shapefile file names are:'
+print shapefileNames
+
+# define workspace
+arcpy.env.workspace = 'folder_path'
+# buffer analysis
+arcpy.Buffer_analysis("NA_Big_Lakes","Buff_Lake","100 Miles", "FULL","ROUND")
+
+raw_input()
+
+
+
+
