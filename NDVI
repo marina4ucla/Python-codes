@@ -1,0 +1,103 @@
+##########################
+# Marina Magana
+# Geog 173
+# Lab 6: Rasters
+# 5-5-14
+########################
+
+# 1 Figure of the size of the image, resolution, map project name, and the number of bands
+
+#2 Compute NDVI
+
+# Make a NDVI Category raster using the following ranges
+# 1 for NDVI <0.0
+#2 .3 > NDVI >=0.0
+#3 NDVI >=.3
+# Outputting the NDVI value and category at location (349202, 3772473)
+
+#standalone python code
+#############################################################################
+
+
+
+#Define folder
+folderpath = r"F:\Spring 2014\Geog 173\Lab\Week 6\RasterData"
+
+#Import Modules
+import arcpy
+from arcpy.sa import *
+
+#Define workspace
+arcpy.env.workspace = folderpath
+
+#Allow overwrite
+arcpy.env.overwriteOutput =  True
+
+#Check out Spatial Analyst Extension
+arcpy.CheckOutExtension("Spatial")
+
+#############################################################
+#List rasters, l is for landsat image
+
+#Describe raster properties
+rasterlist = arcpy.ListRasters('l*','TIF') #way to show tif files that start with l, useful for a longer list
+#$  loop through to describe 
+for raster in rasterlist:
+#define describe raster
+    desc = arcpy.Describe(raster)
+    #print map projection name and number of bands for image
+    print raster + ": " + desc.spatialReference.Name + ' Band#: ' +str(desc.BandCount)
+    #print resolution and size for band 1
+    desc = arcpy.Describe(raster+ "/Band_1")
+    print 'Size: ' +str(desc.height)+ " x " +str(desc.width) + ": " + 'Resolution: ' + str(desc.meanCellHeight) + " x " +str(desc.meanCellWidth)
+
+###################
+#Compute NDVI
+
+input = "Landsat.tif"
+result = "FinalNDVI.tif"
+NIR = input+"\Band_4"
+Red = input+ "\Band_3"
+
+#Will need to be deleted
+NIR_out = "NIR.tif"
+Red_out = "Red.tif"
+
+#copy raster and map algebra
+arcpy.CopyRaster_management(NIR,NIR_out)
+print "Copied NIR band as raster"
+
+arcpy.CopyRaster_management(Red,Red_out)
+
+print "copied Red band as raster"
+
+#create numerator and denominators for NDVI
+#float returns a floating point raster
+Num = arcpy.sa.Float(NIR_out) - Raster(Red_out)
+Denom = arcpy.sa.Float(NIR_out) + Raster(Red_out)
+NIR_eq = arcpy.sa.Divide(Num,Denom)
+print "Dividing"
+
+#save output to a result output
+NIR_eq.save(result)
+print "Successful"
+
+
+
+#########################
+# Category NDVI Raster
+
+ndvi_remap = RemapRange([[-1,0,1],[0,0.3,2],[0.3,1,3]]) #change ranges
+ndvi_category = Reclassify(result, "Value", ndvi_remap) #reclassify
+ndvi_category.save("NDVI_Remap.tif") #save output
+
+
+
+# Outputting the NDVI value and category at the location (349202,3772473)
+newvalue = arcpy.Raster(result)
+BANDID = 1 
+result = arcpy.GetCellValue_management(newvalue,"349202, 3772473",str(BANDID))
+cellValue = result.getOutput(0)
+print cellValue
+
+del Red, NIR, NIR_eq, ndvi_remap, ndvi_category, Red_out, NIR_out
