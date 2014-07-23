@@ -1,0 +1,50 @@
+
+#############################
+# Marina Magana
+# Geog 173
+# Lab 3
+#import arcpy
+# folderpath = r"F:\Spring 2014\Geog 173\Lab\Week 2\LabData"
+
+#set up workspace
+# arcpy.env.workspace = folderpath
+#dont need it, one or the other
+# arcpy.env.overwriteOutput = True
+
+#define variables
+# lakes = "NA_Big_Lakes.shp" #input the getparametersastext
+# cities = "NA_Cities.shp"
+# distance = 100000
+#will be interactive raw input
+# outbuffer = "lake_buff.shp"
+# outcities = "cities_under.shp"
+# statstable = "stats.dbf"
+# statsFields = [["Population","SUM"]]
+# Get parameters as text
+lakes = arcpy.GetParameterAsText(0)
+cities = arcpy.GetParameterAsText(1)
+distance = arcpy.GetParameterAsText(2)
+outbuffer = arcpy.GetParameterAsText(3)
+outcities = arcpy.GetParameterAsText(4)
+statstable = arcpy.GetParameterAsText(5)
+
+#buffer analysis: input lakes and distance Output: outbuffer
+
+arcpy.Buffer_analysis(lakes,outbuffer,distance,"FULL","ROUND","ALL")
+
+#make a lyer from the cities feature class, create layer
+arcpy.MakeFeatureLayer_management(cities,"cities_lyr")
+
+
+#SELECT CITIES THAT FILL WITHIN THE BUFFER, SELECT BY LOCATION
+arcpy.SelectLayerByLocation_management("cities_lyr", "", outbuffer)
+
+#save the selected features as a new layer
+arcpy.CopyFeatures_management("cities_lyr", outcities)
+
+#calculating statistics
+arcpy.Statistics_analysis(outcities, statstable, [["Population","SUM"]])
+                              
+
+
+
