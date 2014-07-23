@@ -1,0 +1,299 @@
+# -*- coding: cp1252 -*-
+
+# Risk Areas Near Active Fracking Wells
+
+
+##################################################################################
+# The following section creates two multi-ring buffers for risk analysis due to  #
+# fracking. The first multi-ring buffer creates a buffer around waterways to     #
+# determine areas that may become flooded. It also creates a shapefile with      #
+# wells that are located in the buffer area. These wells are important for       #
+# monitoring potential impact they can have on waterways and floodplain areas.   #
+# The second multi-ring buffer creates a buffer around faults to determine which #
+# areas are vulnerable to tectonic activity. It creates a shapefile with wells   #
+# that are located in the buffer area. These wells are important for monitoring  #
+# risk of wells in proximity to vulnerable earthquake zones.                     #
+##################################################################################
+
+# 1. Define path
+folderpath = r"\\tsclient\E\What the FRACK"
+
+# 2. Import modules
+import arcpy
+import math
+
+# 3. Define workspace
+arcpy.env.workspace = folderpath
+
+# 4. Allow overwrite 
+arcpy.env.overwriteOutput = True
+
+# 5. Define parameters (will change tool parameters to arcpy.GetParameterAsText(#)
+bufferunit = "kilometers" #units for distances
+fieldname = ""  # leaves field blank
+dissolve = "ALL" # dissolves all buffers
+in_waterways = arcpy.GetParameterAsText(0)
+in_waterdistances = arcpy.GetParameterAsText(1)
+in_wells = arcpy.GetParameterAsText(2)
+out_waterbuffer = arcpy.GetParameterAsText(3)
+out_wellsnearwater = arcpy.GetParameterAsText(4)
+in_faults = arcpy.GetParameterAsText(5)
+in_faultdistances = arcpy.GetParameterAsText(6)
+in_fwells = arcpy.GetParameterAsText(7)
+out_faultbuffer = arcpy.GetParameterAsText(8)
+out_wellsnearfaults = arcpy.GetParameterAsText(9)
+waterwellinfo = arcpy.GetParameterAsText(10)
+faultwellinfo = arcpy.GetParameterAsText(11)
+###################################################################
+# original parameters used when executing standalone python script
+# used for reference
+
+#in_waterways = "Perennials_Ready.shp"
+#out_waterbuffer = "Riverbuff.shp"
+#in_waterdistances = [1, 2, 5]
+#in_wells = "LA_Wells_Ready.shp"
+#out_wellsnearwater = "waterwells.shp"
+#in_faults = "Faults_Ready.shp"
+#out_faultbuffer = "Faultsbuffer.shp"
+#in_faultdistances = [1, 2, 3]
+#in_fwells = "LA_Wells_Ready.shp"
+#out_wellsnearfaults = "faultwells.shp"
+#waterwellinfo = "waterwaywells.shp"
+#faultwellinfo = "faultlinewells.shp"
+###################################################################
+
+
+# 6. Makes a multiple ring buffer around waterways
+arcpy.MultipleRingBuffer_analysis(in_waterways, out_waterbuffer, in_waterdistances, bufferunit, fieldname, dissolve)
+
+arcpy.AddMessage("Multi-ring buffer is done")
+
+# 7. Makes a layer of active fracking wells in/around LA county
+arcpy.MakeFeatureLayer_management(in_wells, "wells_lyr")
+
+arcpy.AddMessage("Feature layer is done")
+
+# 8. Selects wells that fall within the multiple-ring buffer
+arcpy.SelectLayerByLocation_management("wells_lyr", "", out_waterbuffer)
+
+arcpy.AddMessage("Select wells within waterway buffer, DONE")
+
+# 9. Copies the selected wells to a shapefile
+arcpy.CopyFeatures_management("wells_lyr", out_wellsnearwater)
+
+arcpy.AddMessage("Done copying features into new layer")
+
+# 10. Makes a second multiple ring buffer around faults
+arcpy.MultipleRingBuffer_analysis(in_faults, out_faultbuffer, in_faultdistances, bufferunit, fieldname, dissolve)
+
+arcpy.AddMessage("Second multi-ring buffer, faults buffer DONE")
+
+# 12. Makes a layer of active fracking wells in/around LA county
+arcpy.MakeFeatureLayer_management(in_fwells, "wells2_lyr")
+
+arcpy.AddMessage("New feature layer done")
+
+# 13. Selects wells that fall within the multiple-ring buffer
+arcpy.SelectLayerByLocation_management("wells2_lyr", "", out_faultbuffer)
+
+arcpy.AddMessage("Select wells that fill within fault buffer")
+# 14. Copies the selected wells to a shapefile
+arcpy.CopyFeatures_management("wells2_lyr", out_wellsnearfaults)
+arcpy.AddMessage("Add these wells to a new layer")
+
+#################################TABLES####################################
+
+###############################################################################
+# The purpose of this script is to produce a simplified table with the        #
+# following fields found in the "waterwells" shapefile: well number, latitude,#
+# longitude, field name, and a new field "distance" which is where the wells  #
+# lie in proximity to the rivers.                                             #           
+# From this table we can determine which wells are close to waterways         #
+# that can be negatively affected by hydraulic facturing and its byproducts.  #
+###############################################################################
+
+# 1. Creates an output table, specifies parameters
+outtable = "WellTableWaterways.dbf"
+waterways = "Perennials_Ready.shp"
+fc = "waterwells.shp"
+arcpy.CreateTable_management(folderpath,outtable)
+
+# 2. Add fields to new table
+arcpy.AddField_management(outtable,"WellNum","TEXT")
+arcpy.AddField_management(outtable,"City","TEXT")
+arcpy.AddField_management(outtable,"X","DOUBLE")
+arcpy.AddField_management(outtable,"Y","DOUBLE")
+arcpy.AddField_management(outtable,"Distance","DOUBLE")
+arcpy.AddField_management(outtable, "Risk", "TEXT")
+                          
+# 3. Insert cursor creates rows
+inserter = arcpy.InsertCursor(outtable)
+
+# 4. Make search cursor
+wellcursor = arcpy.SearchCursor(fc)
+
+
+# 5. For Loop, gets info from wells near faults 
+for well in wellcursor:
+    #print well.FIELDNAME # for my reference
+    newrow = inserter.newRow() #inserts new row
+
+    newrow.WellNum = well.WELLNUMBER #the following is existing information that will be inserted into the new table
+    newrow.City = well.FIELDNAME
+    newrow.X = well.Latitude
+    newrow.Y = well.Longitude
+
+       
+    
+# 6. Distance search cursor within well_cursor
+    waterway_cursor = arcpy.SearchCursor(waterways)
+    geom = well.Shape #gets waterways shape for first set of x,y coordinates
+    wellX = geom.firstPoint.X #gets x and  y coordinates
+    wellY = geom.firstPoint.Y
+    running_min = 100000000 #set running min to a great distance, so actual distance will always be less
+    for water in waterway_cursor:
+        watergeom = water.Shape #gets shape of polyline waterways
+        numparts = watergeom.partCount #counts the number of parts
+
+        for partindex in range(0,numparts): #for multiple parts in fc
+
+            part = watergeom.getPart(partindex) #get part returns array of points
+
+            for point in part: #gets all points in the parts
+                if point:
+                    distance = math.sqrt((wellX-point.X)**2 + (wellY-point.Y)**2) #distance formula
+                    if distance < running_min: #set high, so will always be greater than minimum
+                        running_min = distance # gets the minimum distance
+    newrow.Distance = running_min
+#will produce a risk field for final project
+    
+# 7. Insert row
+    inserter.insertRow(newrow)
+
+# 8. Delete cursor/row objects
+del well, wellcursor, inserter, newrow, water, waterway_cursor
+
+# 9. Update cursor
+riskcursor = arcpy.UpdateCursor(outtable)
+
+# 10. For loop
+for risk in riskcursor:
+    if risk.Distance < 1756.939496:
+        risk.Risk = "Medium Risk"
+    elif 1756.939494 < risk.Distance < 4680.204972:
+        risk.Risk = "Low Risk"
+    riskcursor.updateRow(risk)
+# 11. Delete
+del risk, riskcursor
+
+###############################################################################
+# The purpose of this script is to produce a simplified table with the        #
+# following fields found in the "faultwells" shapefile: well number, latitude,#
+# longitude, field name, and a new field "distance" which is where the wells  #
+# lie in proximity to the faults.                                             #           
+# From this table we can determine which wells are close to faults that can   #
+# pose a high risk if  they are near active fracking wells.                   #
+###############################################################################
+
+# 1. Create an output table, specifies parameters
+faulttable = "WellTableFaults.dbf"
+faults = "Faults_Ready.shp"
+fc = "faultwells.shp"
+arcpy.CreateTable_management(folderpath,faulttable)
+
+# 2. Add fields to new table
+arcpy.AddField_management(faulttable,"WellNum","TEXT")
+arcpy.AddField_management(faulttable,"City","TEXT")
+arcpy.AddField_management(faulttable,"X","DOUBLE")
+arcpy.AddField_management(faulttable,"Y","DOUBLE")
+arcpy.AddField_management(faulttable,"Distance","DOUBLE")
+arcpy.AddField_management(faulttable,"Risk","TEXT")
+                          
+# 3. Insert cursor creates rows
+inserter2 = arcpy.InsertCursor(faulttable)
+
+# 4. Make search cursor
+wellcursor2 = arcpy.SearchCursor(fc)
+
+
+# 5. For Loop to get attributes
+for well2 in wellcursor2:
+    newrow2 = inserter2.newRow()
+
+    newrow2.WellNum = well2.WELLNUMBER
+    newrow2.City = well2.FIELDNAME
+    newrow2.X = well2.Latitude
+    newrow2.Y = well2.Longitude
+    # distance to faults
+    faults_cursor = arcpy.SearchCursor(faults)
+    geom = well2.Shape
+    wellX = geom.firstPoint.X
+    wellY = geom.firstPoint.Y
+    running_min = 100000000
+    for fault in faults_cursor:
+        faultgeom = fault.Shape
+        numparts = faultgeom.partCount
+
+        for partindex in range(0,numparts): #for multiple parts in fc
+
+            part = faultgeom.getPart(partindex) #get part returns array of points
+
+            for point in part:
+                if point:
+                    distance = math.sqrt((wellX-point.X)**2 + (wellY-point.Y)**2)
+                    if distance < running_min:
+                        running_min = distance
+
+    newrow2.Distance = running_min
+    
+# 6. Insert row
+    inserter2.insertRow(newrow2)
+
+# 7. Delete cursor/row objects
+del well2, wellcursor2, inserter2, newrow2, fault, faults_cursor
+
+# 8. Update cursor
+riskcursor2 = arcpy.UpdateCursor(faulttable)
+
+# 9. For loop
+for risk2 in riskcursor2:
+    if risk2.Distance < 954.3625:
+        risk2.Risk = "High Risk"
+    elif 954.3634 < risk2.Distance < 1235.668899:
+        risk2.Risk = "Medium Risk"
+    riskcursor2.updateRow(risk2)
+# 10. Delete
+del risk2, riskcursor2
+
+############## Joining fields ######################################
+# Joins the simplified table created above to another shapefile    #
+####################################################################
+
+# Waterways
+arcpy.MakeFeatureLayer_management(out_wellsnearwater,"newlayer")
+arcpy.MakeTableView_management(outtable,"newtablelayer", "", "", "")
+
+arcpy.JoinField_management("newlayer", "FID", "newtablelayer", "OID", ["Distance","Risk"])
+
+arcpy.AddMessage("Done joining table to water wells shapefile")
+
+arcpy.CopyFeatures_management('newlayer',waterwellinfo)
+arcpy.AddMessage("Final shapefile with info on waterway wells in waterway buffer, simplified")
+
+
+# Faults
+arcpy.MakeFeatureLayer_management(out_wellsnearfaults,"newlayer2")
+arcpy.MakeTableView_management(faulttable,"newtablelayer2", "", "", "")
+
+arcpy.JoinField_management("newlayer2","FID","newtablelayer2","OID",["Distance","Risk"])
+
+arcpy.AddMessage("Done joining table to fault wells shapefile")
+
+arcpy.CopyFeatures_management('newlayer2',faultwellinfo)
+arcpy.AddMessage("Final shapefile with info on fault wells in fault buffer, simplified")
+                 
+# -*- coding: cp1252 -*-
+#############################################################################
+# Created by: Marina Magaña & Rocio Ramos, Group 1, Geog 173, Final Project #              
+#############################################################################
+
