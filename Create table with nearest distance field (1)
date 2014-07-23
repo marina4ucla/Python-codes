@@ -1,0 +1,164 @@
+# 1 tool - calculate distance from lakes centroid to its nearest city 
+###################
+# Marina Magana
+# Lab 5
+# Geog 173
+# 4-28-14
+###################
+
+
+#No Bonus
+
+##########################################################################
+
+#Lab 5
+
+
+#Define folder
+folderpath = r"F:\Spring 2014\Geog 173\Lab\Week 5\LabData"
+#Import  modules
+import arcpy
+import math
+
+#Define workspace
+arcpy.env.workspace = folderpath
+
+#Allow overwrite
+arcpy.env.overwriteOutput = True
+
+#Use indexes to get info for the city
+
+#Input parameters
+input_lakes = arcpy.GetParameterAsText(0) #formerly lakes shapefile
+input_cities = arcpy.GetParameterAsText(1)# formerly cities shapefile
+
+#outputparameters
+output_lakes = arcpy.GetParameterAsText(2) # lakes copy
+
+
+#replace 3 with get parameters text!!! 
+
+#Create the output lakes shapefile
+arcpy.CopyFeatures_management(input_lakes,output_lakes)#copies features from input layer's attribute table
+
+#Add Fields
+arcpy.AddField_management(output_lakes, "cityname","TEXT")
+arcpy.AddField_management(output_lakes,"country", "TEXT")
+arcpy.AddField_management(output_lakes,"admin","TEXT")
+arcpy.AddField_management(output_lakes,"population","DOUBLE")
+arcpy.AddField_management(output_lakes,"distance","FLOAT")
+arcpy.AddField_management(output_lakes, "cityX", "TEXT")
+arcpy.AddField_management(output_lakes,"cityY","TEXT")
+#....repeat for all fields x and y are separate columns (check)
+            
+
+#Make lists of city info
+
+#Search cursor
+cities_cursor = arcpy.SearchCursor(input_cities) #create a cursor for list of cities
+
+#Create empty lists for city information in new shp
+cityname_list = list()
+country_list = list()
+cityX_list = list()
+cityY_list = list()
+admin_list = list()
+population_list = list()
+
+
+
+# 4-Loop through search cursor, get info
+for city in cities_cursor: 
+    cityname = city.CITY_NAME 
+    country = city.CNTRY_NAME
+    admin = city.ADMIN_NAME
+    population = city.Population
+    #...distance below
+
+#Get XY coordinates
+    geom = city.Shape
+    cityX = geom.firstPoint.X
+    cityY = geom.firstPoint.Y
+#append all fields
+    cityname_list.append(cityname)
+    country_list.append(country)
+    cityX_list.append(cityX)
+    cityY_list.append(cityY)
+    population_list.append(population)
+    admin_list.append(admin)
+    #.......
+
+#Now after that loop we have full lists
+citynum  = len(cityname_list)
+
+#Loop through each lake
+
+#Use update cursor
+lakes_cursor  = arcpy.UpdateCursor(output_lakes)
+
+#Loop through each lake to each city
+#get xy coordinate for our lake centroid
+
+for lake in lakes_cursor:
+    lakegeom = lake.Shape
+    #use centroid, it will return an object
+    lakecentX = lakegeom.centroid.X
+    lakecentY = lakegeom.centroid.Y
+    citydist_list = list()
+    #now we can calc distance from that centroid to that city
+
+    for cityindex in range(0,citynum):
+        cityX = cityX_list[cityindex]
+        cityY = cityY_list[cityindex]
+
+# Calculate distance
+
+        distance = math.sqrt((lakecentX-cityX)**2 + (lakecentY-cityY)**2)
+        citydist_list.append(distance)
+
+# Shortest distance
+    mindist = min(citydist_list)
+    closeindex = citydist_list.index(mindist)
+    print cityname_list[closeindex]
+
+#use closeindex to get values from the city lists
+    cityname = cityname_list[closeindex]
+    country = country_list[closeindex]
+    admin = admin_list[closeindex]
+    population = population_list[closeindex]
+    cityX = cityX_list[closeindex]
+    cityY = cityY_list[closeindex]
+
+#set new field values in the lake row object
+    lake.cityname = cityname
+    lake.country = country
+    lake.admin = admin
+    lake.population = population
+    lake.cityX = cityX
+    lake.cityY = cityY
+    lake.distance = mindist
+
+
+    lakes_cursor.updateRow(lake)
+    
+
+del city, lake, lakes_cursor, cities_cursor
+    
+    
+    #insert rows
+    #dist_cursor = arcpy.insertCursor(output_lakes, "distance")
+    #for x in dist_cursor
+    #   closeindex
+
+#use update cursor to set those values
+# update name into lake cursor value in output lakes shapefile
+# add another 4-loop, list of x y
+        #loop through lake
+        #list of x.y vertices
+        #loop through that list for each city
+        #find shortest distance
+        #index
+        #make sure to delete cities_cursor, city, citynum, cityX, cityY
+        
+
+
