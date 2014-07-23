@@ -1,0 +1,85 @@
+###################################################
+# Week1_Lab.py
+# Marina Magana
+# 04/03/14
+# first python code
+# Week 1
+
+print "Geog 173, Assignment 1"
+
+#mathematical calculation, exponential equation
+for x in range(10):
+    print (x,x**3)
+
+#string handling
+Classcode="Python101"
+print "Python= " +Classcode
+print len (Classcode)
+
+import string
+Deptcode="Python"
+Classnum=101
+Classcode=Deptcode + " " + str(Classnum)
+Classsplit= string.split(Classcode)
+print Classsplit
+print string.upper (Classsplit [1])
+
+#string and list indexing
+#list
+Layerlist=["Syntax", "Formatting", "Operations", "Loops"]
+print Layerlist
+print Layerlist [0]
+#####################
+# Indexing
+#####################
+
+Classcode="Python101"
+print "Classcode= "+Classcode
+print "Classcode[0]="+Classcode[0]
+print "Classcode[0:1]="+Classcode[0:1]
+print "Classcode[0:6]="+Classcode[0:6]
+print "Classcode[6:9]="+Classcode[6:9]
+print "Classcode[6:]="+Classcode[6:]
+print "Classcode[:6]="+Classcode[:6]
+print "Classcode[-4:-2]="+Classcode[-4:-2]
+print "Classcode[-3:]="+Classcode[-3:]
+
+Layerlist=["Syntax","Formatting","Operations","Loops"]
+print "Layerlist[0]="+Layerlist[0]
+print "Layerlist[-1]="+Layerlist[-1]
+print Layerlist[1:4]
+print len (Layerlist)
+
+#Decision Making if else
+x=1
+
+if x == 1:
+    print "x is 1"
+
+elif x==2:
+    print "x is 2"
+else:
+    print "x is not known. :("
+    print "Set up to 1 or 2."
+#for loop
+
+for x in range(1, 4): #1,2
+    print x
+
+#while loop
+
+    j = 0
+
+    while j<=5:
+        print j
+        j=j+1
+        
+
+
+
+
+
+
+    
+    
+    
