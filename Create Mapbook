@@ -1,0 +1,158 @@
+#######################################################
+# Marina Magana
+# Geog 173
+# Lab 7
+# Mapping
+#######################################################
+#Lab Demo
+
+#can't add map elements in arcpy
+#add them to regular arcmap, call it a mxd file
+#zip py file and mxd's together
+
+
+#should have............
+#cover page an overview of all lakes with text info of
+#map book title and author
+#total lake number
+#total lake area
+#average lake area
+#page for each lake should have north arrow, scale bar, title
+# can do labels
+#should have fid and lake area on each page
+
+
+#loop through NA lakes and get info
+# can make 2 or 1 mxd files
+
+######################################################################
+
+#Define folder
+folderpath = r"F:\Geog 173\Lab\Lab7\LabData" #will use folderpath to remove broken links
+
+
+#Import modules
+import arcpy
+import math
+import os #will need this to fix broken links
+
+
+#Define workspace
+arcpy.env.workspace = folderpath
+
+#allow overwrite
+arcpy.env.overwriteOutput = True #will not overwrite mxd files, will have to delete them myself, deleting tmp files as you loop through each lake before you append to mapbook
+
+#define for final workbook
+mxd = arcpy.mapping.MapDocument(folderpath +"/LabData.mxd")
+pdfbook = arcpy.mapping.PDFDocumentCreate(folderpath +"/PDFBOOK.pdf")
+
+#############################################################################################################################################################################
+
+#1. Get information about all the lakes with a SEARCH CURSOR
+lakes_cursor = arcpy.SearchCursor("NA_Big_Lakes.shp") #no sql because we want all the lakes, we can also define NA Big Lakes 
+
+
+#need to define total_lake_area
+total_lake_area = 0 #have to define these objects before assigning values
+numlakes = 0
+
+# loop through all the lakes and add all of their areas
+for lake in lakes_cursor: #loop through lakes_cursor once
+    total_lake_area = total_lake_area + lake.Area_km2 #sum all lake area, define tot lake area before 4 loop
+    numlakes += 1 #shorthand plus equals 1, counts number of lakes
+print "The total area is ", total_lake_area
+print "The number of lakes is ", numlakes
+print "The average lake size is ", total_lake_area / numlakes
+
+del lakes_cursor, lake #clean up objects
+#######################################################
+#have this info, now to put it on a cover page
+#will also need area, other info for each of our map pages
+#################################################################
+
+
+# append title page to  final pdf
+
+
+
+
+############################################################################
+#2. Get access to  mxd, title pag
+titlefile = arcpy.mapping.MapDocument(folderpath +"/titlepg.mxd")
+title = arcpy.mapping.ListLayoutElements(titlefile, "TEXT_ELEMENT")[0] #what kind of elements we want, see help page
+numblakes = arcpy.mapping.ListLayoutElements(titlefile, "TEXT_ELEMENT")[1] #indexes the text elements in order
+author = arcpy.mapping.ListLayoutElements(titlefile, "TEXT_ELEMENT")[2]
+avgarea = arcpy.mapping.ListLayoutElements(titlefile, "TEXT_ELEMENT")[3]
+area = arcpy.mapping.ListLayoutElements(titlefile,"TEXT_ELEMENT")[4]
+title.text = "North American Big Lakes" #assigns text to title pdf page
+author.text = "Author: Marina Magana"
+numblakes.text = "Number of Lakes: " + str(numlakes)
+avgarea.text = "Average Lake Size: " +str(total_lake_area/ numlakes)
+area.text = "Total Lake Area: " + str(total_lake_area)
+
+#for elm in layout:
+ #   elm.text = "North American Big Lakes"
+  #  print elm.text #prints the text properties, for own reference   
+
+#append title page to pdfbook
+arcpy.mapping.ExportToPDF(titlefile, folderpath +"/title.pdf")
+pdfbook.appendPages("title.pdf")
+if os.path.exists("title.pdf"):
+    os.remove("title.pdf")
+
+#make labels
+df = arcpy.mapping.ListDataFrames(titlefile)[0]
+lyr_list = arcpy.mapping.ListLayers(titlefile, "", df)
+for lyr in lyr_list:
+    lyr.showLabels = True
+                     
+
+#############################################################################################################################
+#3. Make Individual maps
+#Loop through each lake for each page in the map book, can't use lakes_cursor again (can only loop through it once)
+
+lakes_cursor = arcpy.SearchCursor("NA_Big_Lakes.shp")
+
+#Loop through each lake and make a pdf page for it
+
+for lake in lakes_cursor:
+    df = arcpy.mapping.ListDataFrames(titlefile)[0] #uses the data frame for the titlepage
+    geom = lake.Shape
+    df.extent = geom.extent
+    newExtent = df.extent #zooms to extent of lake
+    lakefid = arcpy.mapping.ListLayoutElements(titlefile, "TEXT_ELEMENT")[0]
+    lakearea = arcpy.mapping.ListLayoutElements(titlefile, "TEXT_ELEMENT")[1]
+    null = arcpy.mapping.ListLayoutElements(titlefile, "TEXT_ELEMENT")[2]
+    null1 = arcpy.mapping.ListLayoutElements(titlefile, "TEXT_ELEMENT")[3]
+    null2 = arcpy.mapping.ListLayoutElements(titlefile, "TEXT_ELEMENT")[4]
+    lakefid.text = "FID: " +str(lake.FID) #shows FID as title
+    lakearea.text = "Area: " +str(lake.Area_km2) + " square km" #area for first element
+    null.text = " " #we dont need these 3 first parameters, replaces it with a blank
+    null1.text = " "
+    null2.text = " "
+    mxd.save()
+    arcpy.mapping.ExportToPDF(titlefile, "lakemaps.pdf")
+    pdfbook.appendPages("lakemaps.pdf") #Append lake maps to the final pdf
+    if os.path.exists("lakemaps.pdf"):
+        os.remove("lakemaps.pdf")
+        
+pdfbook.saveAndClose()   
+
+
+
+del lakes_cursor, lake, titlefile, pdfbook, mxd, lyr_list, df, lyr
+    #Close and save the final pdf file
+
+    
+    
+    
+
+
+
+
+
+
+
+
+
