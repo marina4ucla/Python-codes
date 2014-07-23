@@ -1,0 +1,130 @@
+###########################
+# Marina Magana
+# Geog 173
+# Lab 3
+###########################
+#define folder
+folderpath = r"\\tsclient\E\Geog 173\Lab\Lab7\LabData"
+
+import arcpy
+
+#define workspace
+arcpy.env.workspace = folderpath
+
+#allow overwrite
+arcpy.env.overwrite_Output = True
+
+#create an output table
+outtable = "NACityTable.dbf"
+arcpy.CreateTable_management(folderpath,outtable)
+
+#add fields to new table
+arcpy.AddField_management(outtable,"City","TEXT")
+arcpy.AddField_management(outtable,"Country","TEXT")
+arcpy.AddField_management(outtable,"Admin","TEXT")
+arcpy.AddField_management(outtable,"Pop","DOUBLE")
+
+#still contains no rows
+
+#insert cursor creates rows
+inserter = arcpy.InsertCursor(outtable)
+
+#search cursors for all 3 countries
+
+#create search cursor for USA
+fc = "NA_Cities.shp" 
+newCountry = arcpy.AddFieldDelimiters(fc,"CNTRY_NAME")
+newpop = arcpy.AddFieldDelimiters(fc,"Population")
+
+# IGNORE ( + " = United States) "
+
+USASQL = newCountry + " = 'United States' AND " + newpop + " >= 8000000"
+print USASQL
+USAcursor = arcpy.SearchCursor(fc,USASQL)
+
+#4-loop
+for city in USAcursor:
+    print city.CITY_NAME
+    newrow = inserter.newRow()
+    
+    newrow.City = city.CITY_NAME
+    newrow.Country = city.CNTRY_NAME
+    newrow.Admin = city.ADMIN_NAME
+    newrow.Pop = city.Population
+
+#insert row
+    inserter.insertRow(newrow)
+
+#make sure to del cursor/row objects
+del city, USAcursor
+#inserter, newrow  - delete these at the end
+
+
+    
+#2 CANADA SEARCH CURSOR
+newcountry = arcpy.AddFieldDelimiters(fc,"CNTRY_NAME")
+newpop =  arcpy.AddFieldDelimiters(fc,"Population")
+CANSQL = newcountry + " = 'Canada' AND " + newpop + " >= 3000000"
+CANcursor = arcpy.SearchCursor(fc,CANSQL)
+print CANSQL
+
+#4 loop for canada
+for row in CANcursor:
+    print row.CITY_NAME
+    newrow = inserter.newRow()
+
+    newrow.City = row.CITY_NAME
+    newrow.Country = row.CNTRY_NAME
+    newrow.Admin = row.ADMIN_NAME
+    newrow.Pop = row.Population
+
+#insert into new row
+    inserter.insertRow(newrow)
+
+
+#delete objects
+del CANcursor,row
+#delete these at the end inserter,newrow
+
+
+#3 MEXICO SEARCH CURSOR
+newcountry = arcpy.AddFieldDelimiters(fc,"CNTRY_NAME")
+newpop = arcpy.AddFieldDelimiters(fc,"Population")
+MEXSQL = newcountry + " = 'Mexico' AND " + newpop + " >=8000000 "
+MEXcursor = arcpy.SearchCursor(fc,MEXSQL)
+print MEXSQL
+
+#4 loop for mexico
+for new in MEXcursor:
+    print new.CITY_NAME
+    newrow = inserter.newRow()
+
+    newrow.City = new.CITY_NAME
+    newrow.Country = new.CNTRY_NAME
+    newrow.Admin = new.ADMIN_NAME
+    newrow.Pop = new.Population
+
+    #insert into new row
+    inserter.insertRow(newrow)
+
+    #delete objects
+del MEXcursor, new, inserter, newrow
+    
+
+                               
+
+
+
+
+
+
+
+#newrow = inserter.newRow()
+#newrow.cityname = "Los Angeles"
+#inserter.insertRow(newrow)
+
+#del inserter
+#del newrow
+
+
+
